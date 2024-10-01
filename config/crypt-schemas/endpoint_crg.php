@@ -1,0 +1,38 @@
+<?php
+return [
+    'collection' => 'm28',
+    'exclude_crypt_fields' => [
+        "ignore_lead_statuses",
+        "country_code",
+        "language_code",
+        "sub_publisher_list",
+        "blocked_schedule",
+        "funnel_list",
+        'status',
+        'type',
+    ],
+    'fields' => [
+        "clientId" => 'a1',
+        "TrafficEndpoint" => 'a2',
+        "type" => 'a3',
+        "name" => 'a4',
+        "description" => 'a5',
+        "country_code" => 'a6',
+        "language_code" => 'a7',
+        "min_crg" => 'a8',
+        "calc_period_crg" => 'a9',
+        "limited_leads" => 'a10',
+        "leads" => 'a11',
+        "payout" => 'a12',
+        "endpoint" => 'a13',
+        "blocked_schedule" => 'a14',
+        "end_date" => 'a15',
+        "status" => 'a16',
+        "funnel_list" => 'a17',
+        "ignore_lead_statuses" => 'a18',
+        "max_crg_invalid" => 'a19',
+        "sub_publisher_list" => 'a20',
+        "created_at" => 'a21',
+        "updated_at" => 'a22',
+    ]
+];

@@ -1,0 +1,785 @@
+# This file is a template, and might need editing before it works on your project.
+# This is a sample GitLab CI/CD configuration file that should run without any modifications.
+# It demonstrates a basic 3 stage CI/CD pipeline. Instead of real tests or scripts,
+# it uses echo commands to simulate the pipeline execution.
+#
+# A pipeline is composed of independent jobs that run scripts, grouped into stages.
+# Stages run in sequential order, but jobs within stages run in parallel.
+#
+# For more information, see: https://docs.gitlab.com/ee/ci/yaml/index.html#stages
+#
+# You can copy and paste this template into a new `.gitlab-ci.yml` file.
+# You should not add this template to an existing `.gitlab-ci.yml` file by using the `include:` keyword.
+#
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Getting-Started.gitlab-ci.yml
+
+stages:          # List of stages for jobs, and their order of execution
+  - preparation
+  - build
+  - test
+  - security
+  - backup
+  - deploy
+
+cache:
+  key: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+  paths:
+      - vendor/
+      - node_modules/
+
+# DEV ----------------------------------------
+composer:dev:
+  stage: preparation
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  script:
+    - php -v
+    - composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts --no-suggest
+    # - cp .env.dev .env
+    - cp -rv /var/www/html/qa_saas/api/.env .env
+    - mkdir -p bootstrap/cache
+    - chmod -R 777 bootstrap/cache/
+  artifacts:
+    paths:
+      - vendor/
+      - .env
+    expire_in: 1 days
+    when: always
+  cache:
+    paths:
+      - vendor/
+
+yarn:dev:
+  stage: preparation
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  script:
+    # - yarn --version
+    - echo "skipping for now"
+    # - yarn install --pure-lockfile
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 days
+    when: always
+
+build-assets:dev:
+  stage: build
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  # Download the artifacts for these jobs
+  # dependencies:
+    # - composer:dev
+    # - yarn:dev
+  script:
+    # - yarn --version
+    - echo "skipping for now"
+    # - yarn run devuction --progress false
+  artifacts:
+    paths:
+      - public/css/
+      - public/js/
+      - public/fonts/
+      - public/mix-manifest.json
+    expire_in: 1 days
+    when: always
+
+phpunit:dev:
+  stage: test
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  # Download the artifacts for these jobs
+  # dependencies:
+    # - build-assets:dev
+    # - composer:dev
+  script:
+    - php -v
+    - ./vendor/phpunit/phpunit/phpunit --version
+    - mkdir -p bootstrap/cache
+    - chmod -R 777 bootstrap/cache/
+    - php -d short_open_tag=off ./vendor/phpunit/phpunit/phpunit -v --colors=never --stderr
+  artifacts:
+    paths:
+      - ./storage/logs # for debugging
+    expire_in: 1 days
+    when: on_failure
+
+codestyle:dev:
+  stage: test
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  script:
+    - php -v
+    # check it later
+    # - phpcs --extensions=php app
+  dependencies: []
+
+phpcpd:dev:
+  stage: test
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  script:
+    - test -f phpcpd.phar || curl -L https://phar.phpunit.de/phpcpd.phar -o phpcpd.phar
+    - echo "skipping for now"
+    # check it later
+    # - php phpcpd.phar app/ --min-lines=50
+  dependencies: []
+  cache:
+    paths:
+      - phpcpd.phar
+
+phpcbf:dev:
+  stage: test
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  script:
+    - echo "skipping for now"
+    # - vendor/bin/phpcbf --standard=psr2 app/
+  dependencies: []
+
+phpcs:dev:
+  stage: test
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  script:
+    - echo "skipping for now"
+    # - vendor/bin/phpcs --standard=psr2 --colors app/
+  dependencies: []
+
+sensiolabs:dev:
+  stage: security
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  script:
+    - echo "skipping for now"
+    # - test -d security-checker || git clone https://github.com/sensiolabs/security-checker.git
+    # - cd security-checker
+    # - composer install
+    # check it later
+    # - php security-checker security:check ../composer.lock
+  dependencies: []
+  cache:
+    paths:
+      - security-checker/
+
+backup:dev:
+  stage: backup
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  script:
+     - echo "skiping for dev"
+    # - /usr/bin/bash /var/www/html/qa_saas/backup_api.sh
+
+deploy:dev:
+  stage: deploy
+  only:
+      - dev
+  tags:
+      - crm
+      - api
+      - dev
+  script:
+    - echo "Deploying application..."
+    - rm -rf /var/www/html/qa_saas/api_deploy
+    - mkdir -p /var/www/html/qa_saas/api_deploy
+    - echo "Start copy src"
+    - cp -rv . /var/www/html/qa_saas/api_deploy >/dev/null 2>&1
+    - rm -rf /var/www/html/qa_saas/api_deploy/.git
+    - echo "Start copy config"
+    # - cp -rv /var/www/html/qa_saas/api/config /var/www/html/qa_saas/api_deploy
+    - find /var/www/html/qa_saas/api_deploy/ -name ".env*" -type f -delete
+    - cp -rv /var/www/html/qa_saas/api/.env* /var/www/html/qa_saas/api_deploy/
+    - cp -rv /var/www/html/qa_saas/api/vendor/konekt/pdf-invoice/src/InvoicePrinter.php /var/www/html/qa_saas/api_deploy/vendor/konekt/pdf-invoice/src/InvoicePrinter.php
+    - echo "Start copy storage"
+    - rm -rf /var/www/html/qa_saas/api_deploy/storage
+    # made ln -s
+    - ln -s /var/www/html/qa_saas/api_storage /var/www/html/qa_saas/api_deploy/storage
+    # - cp -rv /var/www/html/qa_saas/api/storage /var/www/html/qa_saas/api_deploy
+    - echo "Start set permisstions"
+    # - sudo chown -R www-data:www-data /var/www/html/qa_saas/api_deploy
+    - find /var/www/html/qa_saas/api_deploy -type f -exec chmod 664 {} \;
+    - find /var/www/html/qa_saas/api_deploy -type d -exec chmod 775 {} \;
+    - cd /var/www/html/qa_saas/api_deploy
+    - mkdir -p bootstrap/cache
+    # - sudo chgrp -R www-data www-data bootstrap/cache
+    # - sudo chmod -R ug+rwx www-data bootstrap/cache
+    - chmod -R 777 bootstrap/cache
+    # - sudo chmod -R 777 storage
+    # - cp .env.dev .env
+    - echo "Start run artisan's commands"
+    - composer require jenssegers/agent
+    - php artisan key:generate
+    - php artisan cache:clear
+    - php artisan config:clear
+    # - php artisan l5-swagger:generate
+    # - php artisan storage:link
+    - rm -rf /var/www/html/qa_saas/api
+    - mv /var/www/html/qa_saas/api_deploy /var/www/html/qa_saas/api
+    - echo "Application successfully deployed."
+
+# PROD GOOGLE 1 ----------------------------------------
+composer:prod-google-1:
+  stage: preparation
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  script:
+    - php -v
+    - composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts --no-suggest
+    # - cp .env.prod .env
+    - cp -rv /var/www/html/saas/api/.env .env
+    - mkdir -p bootstrap/cache
+    - chmod -R 777 bootstrap/cache/
+  artifacts:
+    paths:
+      - vendor/
+      - .env
+    expire_in: 1 days
+    when: always
+  cache:
+    paths:
+      - vendor/
+
+yarn:prod-google-1:
+  stage: preparation
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  script:
+    # - yarn --version
+    - echo "skipping for now"
+    # - yarn install --pure-lockfile
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 days
+    when: always
+
+build-assets:prod-google-1:
+  stage: build
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  # Download the artifacts for these jobs
+  # dependencies:
+  #   - composer:prod-google-1
+  #   - yarn:prod-google-1
+  script:
+    # - yarn --version
+    - echo "skipping for now"
+    # - yarn run production --progress false
+  artifacts:
+    paths:
+      - public/css/
+      - public/js/
+      - public/fonts/
+      - public/mix-manifest.json
+    expire_in: 1 days
+    when: always
+
+phpunit:prod-google-1:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  # Download the artifacts for these jobs
+  # dependencies:
+    # - build-assets:prod-google-1
+    # - composer:prod-google-1
+  script:
+    - php -v
+    - ./vendor/phpunit/phpunit/phpunit --version
+    - mkdir -p bootstrap/cache
+    - chmod -R 777 bootstrap/cache/
+    - php -d short_open_tag=off ./vendor/phpunit/phpunit/phpunit -v --colors=never --stderr
+  artifacts:
+    paths:
+      - ./storage/logs # for debugging
+    expire_in: 1 days
+    when: on_failure
+
+codestyle:prod-google-1:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  script:
+    - php -v
+    # check it later
+    # - phpcs --extensions=php app
+  dependencies: []
+
+phpcpd:prod-google-1:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  script:
+    - test -f phpcpd.phar || curl -L https://phar.phpunit.de/phpcpd.phar -o phpcpd.phar
+    - echo "skipping for now"
+    # check it later
+    # - php phpcpd.phar app/ --min-lines=50
+  dependencies: []
+  cache:
+    paths:
+      - phpcpd.phar
+
+phpcbf:prod-google-1:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  script:
+    - echo "skipping for now"
+    # - vendor/bin/phpcbf --standard=psr2 app/
+  dependencies: []
+
+phpcs:prod-google-1:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  script:
+    - echo "skipping for now"
+    # - vendor/bin/phpcs --standard=psr2 --colors app/
+  dependencies: []
+
+sensiolabs:prod-google-1:
+  stage: security
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  script:
+    - echo "skipping for now"
+    # - test -d security-checker || git clone https://github.com/sensiolabs/security-checker.git
+    # - cd security-checker
+    # - composer install
+    # check it later
+    # - php security-checker security:check ../composer.lock
+  dependencies: []
+  cache:
+    paths:
+      - security-checker/
+
+backup:prod-google-1:
+  stage: backup
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  script:
+    - /usr/bin/bash /var/www/html/saas/backup_saas_api.sh
+
+deploy:prod-google-1:
+  stage: deploy
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-1
+  script:
+    - echo "Deploying application..."
+    - rm -rf /var/www/html/saas/api_deploy
+    - mkdir -p /var/www/html/saas/api_deploy
+    - echo "Start copy src"
+    - cp -rv . /var/www/html/saas/api_deploy >/dev/null 2>&1
+    - rm -rf /var/www/html/saas/api_deploy/.git
+    - echo "Start copy config"
+    # - cp -rv /var/www/html/saas/api/config /var/www/html/saas/api_deploy
+    - find /var/www/html/saas/api_deploy/ -name ".env*" -type f -delete
+    - cp -rv /var/www/html/saas/api/.env* /var/www/html/saas/api_deploy/
+    - cp -rv /var/www/html/saas/api/vendor/konekt/pdf-invoice/src/InvoicePrinter.php /var/www/html/saas/api_deploy/vendor/konekt/pdf-invoice/src/InvoicePrinter.php
+    - echo "Start copy storage"
+    - rm -rf /var/www/html/saas/api_deploy/storage
+    # made ln -s
+    - ln -s /var/www/html/api_saas_storage /var/www/html/saas/api_deploy/storage
+    # - cp -rv /var/www/html/saas/api/storage /var/www/html/saas/api_deploy
+    - echo "Start set permisstions"
+    # - sudo chown -R www-data:www-data /var/www/html/saas/api_deploy
+    - find /var/www/html/saas/api_deploy -type f -exec chmod 664 {} \;
+    - find /var/www/html/saas/api_deploy -type d -exec chmod 775 {} \;
+    - cd /var/www/html/saas/api_deploy
+    - mkdir -p bootstrap/cache
+    # - sudo chgrp -R www-data www-data bootstrap/cache
+    # - sudo chmod -R ug+rwx www-data bootstrap/cache
+    - chmod -R 777 bootstrap/cache
+    # - sudo chmod -R 777 storage
+    - echo "Start run artisan's commands"
+    - composer require jenssegers/agent
+    - php artisan key:generate
+    - php artisan cache:clear
+    - php artisan config:clear
+    # - php artisan l5-swagger:generate
+    # - php artisan storage:link
+    - rm -rf /var/www/html/saas/api
+    - mv /var/www/html/saas/api_deploy /var/www/html/saas/api
+    - echo "Application successfully deployed."
+
+
+# PROD GOOGLE 2 ----------------------------------------
+
+composer:prod-google-2:
+  stage: preparation
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  script:
+    - php -v
+    - composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts --no-suggest
+    # - cp .env.prod .env
+    - cp -rv /var/www/html/saas/api/.env .env
+    - mkdir -p bootstrap/cache
+    - chmod -R 777 bootstrap/cache/
+  artifacts:
+    paths:
+      - vendor/
+      - .env
+    expire_in: 1 days
+    when: always
+  cache:
+    paths:
+      - vendor/
+
+yarn:prod-google-2:
+  stage: preparation
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  script:
+    # - yarn --version
+    - echo "skipping for now"
+    # - yarn install --pure-lockfile
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 days
+    when: always
+
+build-assets:prod-google-2:
+  stage: build
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  # Download the artifacts for these jobs
+  # dependencies:
+    # - composer:prod-google-2
+    # - yarn:prod-google-2
+  script:
+    # - yarn --version
+    - echo "skipping for now"
+    # - yarn run production --progress false
+  artifacts:
+    paths:
+      - public/css/
+      - public/js/
+      - public/fonts/
+      - public/mix-manifest.json
+    expire_in: 1 days
+    when: always
+
+phpunit:prod-google-2:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  # Download the artifacts for these jobs
+  # dependencies:
+    # - build-assets:prod-google-2
+    # - composer:prod-google-2
+  script:
+    - php -v
+    - ./vendor/phpunit/phpunit/phpunit --version
+    - mkdir -p bootstrap/cache
+    - chmod -R 777 bootstrap/cache/
+    - php -d short_open_tag=off ./vendor/phpunit/phpunit/phpunit -v --colors=never --stderr
+  artifacts:
+    paths:
+      - ./storage/logs # for debugging
+    expire_in: 1 days
+    when: on_failure
+
+codestyle:prod-google-2:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  script:
+    - php -v
+    # check it later
+    # - phpcs --extensions=php app
+  dependencies: []
+
+phpcpd:prod-google-2:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  script:
+    - test -f phpcpd.phar || curl -L https://phar.phpunit.de/phpcpd.phar -o phpcpd.phar
+    - echo "skipping for now"
+    # check it later
+    # - php phpcpd.phar app/ --min-lines=50
+  dependencies: []
+  cache:
+    paths:
+      - phpcpd.phar
+
+phpcbf:prod-google-2:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  script:
+    - echo "skipping for now"
+    # - vendor/bin/phpcbf --standard=psr2 app/
+  dependencies: []
+
+phpcs:prod-google-2:
+  stage: test
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  script:
+    - echo "skipping for now"
+    # - vendor/bin/phpcs --standard=psr2 --colors app/
+  dependencies: []
+
+sensiolabs:prod-google-2:
+  stage: security
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  script:
+    - echo "skipping for now"
+    # - test -d security-checker || git clone https://github.com/sensiolabs/security-checker.git
+    # - cd security-checker
+    # - composer install
+    # check it later
+    # - php security-checker security:check ../composer.lock
+  dependencies: []
+  cache:
+    paths:
+      - security-checker/
+
+backup:prod-google-2:
+  stage: backup
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  script:
+    - /usr/bin/bash /var/www/html/saas/backup_saas_api.sh
+
+deploy:prod-google-2:
+  stage: deploy
+  only:
+      - main
+  tags:
+      - crm
+      - api
+      - prod
+      - saas
+      - google
+      - server-2
+  script:
+    - echo "Deploying application..."
+    - rm -rf /var/www/html/saas/api_deploy
+    - mkdir -p /var/www/html/saas/api_deploy
+    - echo "Start copy src"
+    - cp -rv . /var/www/html/saas/api_deploy >/dev/null 2>&1
+    - rm -rf /var/www/html/saas/api_deploy/.git
+    - echo "Start copy config"
+    # - cp -rv /var/www/html/saas/api/config /var/www/html/saas/api_deploy
+    - find /var/www/html/saas/api_deploy/ -name ".env*" -type f -delete
+    - cp -rv /var/www/html/saas/api/.env* /var/www/html/saas/api_deploy/
+    - cp -rv /var/www/html/saas/api/vendor/konekt/pdf-invoice/src/InvoicePrinter.php /var/www/html/saas/api_deploy/vendor/konekt/pdf-invoice/src/InvoicePrinter.php
+    - echo "Start copy storage"
+    - rm -rf /var/www/html/saas/api_deploy/storage
+    # made ln -s
+    - ln -s /var/www/html/api_saas_storage /var/www/html/saas/api_deploy/storage
+    # - cp -rv /var/www/html/saas/api/storage /var/www/html/saas/api_deploy
+    - echo "Start set permisstions"
+    # - sudo chown -R www-data:www-data /var/www/html/saas/api_deploy
+    - find /var/www/html/saas/api_deploy -type f -exec chmod 664 {} \;
+    - find /var/www/html/saas/api_deploy -type d -exec chmod 775 {} \;
+    - cd /var/www/html/saas/api_deploy
+    - mkdir -p bootstrap/cache
+    # - sudo chgrp -R www-data www-data bootstrap/cache
+    # - sudo chmod -R ug+rwx www-data bootstrap/cache
+    - chmod -R 777 bootstrap/cache
+    # - sudo chmod -R 777 storage
+    - echo "Start run artisan's commands"
+    - composer require jenssegers/agent
+    - php artisan key:generate
+    - php artisan cache:clear
+    - php artisan config:clear
+    # - php artisan l5-swagger:generate
+    # - php artisan storage:link
+    - rm -rf /var/www/html/saas/api
+    - mv /var/www/html/saas/api_deploy /var/www/html/saas/api
+    - echo "Application successfully deployed."

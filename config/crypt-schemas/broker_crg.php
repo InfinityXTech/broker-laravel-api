@@ -1,0 +1,43 @@
+<?php
+return [
+    'collection' => 'm12',
+    'exclude_crypt_fields' => [
+        "endpoint",
+        "country_code",
+        "language_code",
+        "sub_publisher_list",
+        "funnel_list",
+        "ignore_lead_statuses",
+        "blocked_schedule",
+        'status',
+        'type',
+    ],
+    'fields' => [
+        "clientId" => 'a1',
+        "broker" => 'a2',
+        "endpoint" => 'a3',
+        "type" => 'a4',
+        "name" => 'a5',
+        "description" => 'a6',
+        "country_code" => 'a7',
+        "language_code" => 'a8',
+        "min_crg" => 'a9',
+        "calc_period_crg" => 'a10',
+        "limited_leads" => 'a11',
+        "leads" => 'a12',
+        "payout" => 'a13',
+        "ignore_lead_statuses" => 'a14',
+        "ignore_endpoints" => 'a15',
+        "blocked_schedule" => 'a16',
+        "end_date" => 'a17',
+        "status" => 'a18',
+        "apply_crg_per_endpoint" => 'a19',
+        "only_integrations" => 'a20',
+        "max_crg_invalid" => 'a21',
+        "sub_publisher_list" => 'a22',
+        "funnel_list" => 'a23',
+        "created_at" => 'a24',
+        "updated_at" => 'a25',
+        "schedule" => 'a26'
+    ]
+];
